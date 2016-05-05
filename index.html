@@ -614,6 +614,9 @@ Save the residuals.</li>
 <div class="bs-callout bs-callout-info">
 <p>Why is only <span class="math inline">\(\vec{y}\)</span> being samples? Why is <span class="math inline">\(\mat{X}\)</span> fixed in these simulations? See Wooldridge Ch 2 and 3 discussion of the assumptions of OLS.</p>
 </div>
+<div class="bs-callout bs-callout-info">
+<p>The standard assumptions for regression assume fixed values of <span class="math inline">\(\mat{X}\)</span>. However, regression will work for random <span class="math inline">\(\mat{X}\)</span> if <span class="math inline">\(\mat{X}\)</span> is uncorrelated with the disturbances <span class="math inline">\(\vec{\varepsilon}\)</span>.</p>
+</div>
 <p>Let’s take the results of the model on <code>ln_export_pop</code> and explore the sampling distribution of <span class="math inline">\(\beta\)</span> from that model.</p>
 <p>First run the model,</p>
 <pre class="r"><code>mod &lt;- lm(trust_neighbors ~ ln_export_pop + 

@@ -639,6 +639,10 @@ Then, the distribution of the $\beta^*$ is a sampling distribution of the parame
 Why is only $\vec{y}$ being samples? Why is $\mat{X}$ fixed in these simulations? See Wooldridge Ch 2 and 3 discussion of the assumptions of OLS.
 </div>
 
+<div class="bs-callout bs-callout-info">
+The standard assumptions for regression assume fixed values of $\mat{X}$. However, regression will work for random $\mat{X}$ if $\mat{X}$ is uncorrelated with the disturbances $\vec{\varepsilon}$.
+</div>
+
 Let's take the results of the model on `ln_export_pop` and explore the sampling distribution of $\beta$ from that model.
 
 First run the model,
