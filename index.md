@@ -18,8 +18,10 @@ We'll use these packages,
 library("foreign")
 library("dplyr")
 library("broom")
+library("tidyr")
 library("ggplot2")
 library("viridis")
+library("stringr")
 library("DT")
 ```
 Since we are going to do some simulation, we should set a seed, so the results are exactly replicable.
@@ -185,7 +187,7 @@ Although we are using an OLS regression for a discrete and bounded outcome varia
 The null hypothesis of the t-test reported by `summary.lm()` is $\beta_{\mathtt{exports}} = 0$.
 The $p$-value is the probability of observing a $t$-statistic equal to or more extreme than what was observed in the sample under repeated samples drawn from the same population, if the null hypothesis were true.
 No, the $p$-value is not the probability that the null hypothesis is correct. 
-In frequentist statistics, only samples have probabilities, hypotheses do not have a probability associated with them. They are either true of false, but the truth value is unknown.
+In Frequentist statistics, only samples have probabilities, hypotheses do not have a probability associated with them. They are either true of false, but the truth value is unknown.
 Even in Bayesian inference, the $p$-value gives the probability of the data given the hypothesis, and to calculate the probability of the hypothesis given the data we would need the prior probability of the null hypothesis.
 </div>
 
@@ -243,96 +245,12 @@ mod_1_1 <- lm(trust_neighbors ~
               # country-level
               isocode,
               data = nunn)
-mod_1_1
+tidy(mod_1_1) %>% filter(term == "exports")
 ```
 
 ```
-## 
-## Call:
-## lm(formula = trust_neighbors ~ exports + age + age2 + male + 
-##     urban_dum + education + occupation + religion + living_conditions + 
-##     district_ethnic_frac + frac_ethnicity_in_district + isocode, 
-##     data = nunn)
-## 
-## Coefficients:
-##                (Intercept)                     exports  
-##                  1.620e+00                  -6.791e-04  
-##                        age                        age2  
-##                  8.396e-03                  -5.473e-05  
-##                       male                   urban_dum  
-##                  4.550e-02                  -1.405e-01  
-##                 education1                  education2  
-##                  1.710e-02                  -5.225e-02  
-##                 education3                  education4  
-##                 -1.374e-01                  -1.890e-01  
-##                 education5                  education6  
-##                 -1.893e-01                  -2.401e-01  
-##                 education7                  education8  
-##                 -2.851e-01                  -1.232e-01  
-##                 education9                 occupation1  
-##                 -2.406e-01                   6.186e-02  
-##                occupation2                 occupation3  
-##                  7.392e-02                   3.356e-02  
-##                occupation4                 occupation5  
-##                  7.942e-03                   6.661e-02  
-##                occupation6                 occupation7  
-##                 -7.563e-02                   1.700e-02  
-##                occupation8                 occupation9  
-##                 -9.428e-02                  -9.981e-02  
-##               occupation10                occupation11  
-##                 -3.307e-02                  -2.300e-02  
-##               occupation12                occupation13  
-##                 -1.565e-01                  -1.441e-02  
-##               occupation14                occupation15  
-##                 -5.566e-02                  -2.344e-01  
-##               occupation16                occupation18  
-##                 -1.307e-02                  -1.730e-01  
-##               occupation19                occupation20  
-##                 -1.770e-01                  -2.458e-02  
-##               occupation21                occupation22  
-##                 -4.937e-02                  -1.069e-01  
-##               occupation23                occupation24  
-##                 -9.712e-02                   1.292e-02  
-##               occupation25               occupation995  
-##                  2.623e-02                  -1.195e-03  
-##                  religion2                   religion3  
-##                  5.396e-02                   7.888e-02  
-##                  religion4                   religion5  
-##                  4.749e-02                   4.318e-02  
-##                  religion6                   religion7  
-##                 -1.788e-02                  -3.617e-02  
-##                 religion10                  religion11  
-##                  6.015e-02                   2.238e-01  
-##                 religion12                  religion13  
-##                  2.627e-01                  -6.813e-02  
-##                 religion14                  religion15  
-##                  4.674e-02                   3.845e-01  
-##                religion360                 religion361  
-##                  3.657e-01                   3.416e-01  
-##                religion362                 religion363  
-##                  8.230e-01                   3.857e-01  
-##                religion995          living_conditions2  
-##                  4.161e-02                   4.396e-02  
-##         living_conditions3          living_conditions4  
-##                  8.627e-02                   1.197e-01  
-##         living_conditions5        district_ethnic_frac  
-##                  1.204e-01                  -1.554e-02  
-## frac_ethnicity_in_district                  isocodeBWA  
-##                  1.011e-01                  -4.259e-01  
-##                 isocodeGHA                  isocodeKEN  
-##                  1.135e-02                  -1.820e-01  
-##                 isocodeLSO                  isocodeMDG  
-##                 -5.511e-01                  -3.316e-01  
-##                 isocodeMLI                  isocodeMOZ  
-##                  7.528e-02                   8.224e-02  
-##                 isocodeMWI                  isocodeNAM  
-##                  3.062e-01                  -1.398e-01  
-##                 isocodeNGA                  isocodeSEN  
-##                 -2.382e-01                   3.867e-01  
-##                 isocodeTZA                  isocodeUGA  
-##                  2.079e-01                  -6.444e-02  
-##                 isocodeZAF                  isocodeZMB  
-##                 -2.179e-01                  -2.173e-01
+##      term     estimate    std.error statistic      p.value
+## 1 exports -0.000679136 4.855134e-05   -13.988 2.986858e-44
 ```
 
 <div class="bs-callout bs-callout-info">
@@ -345,25 +263,287 @@ mod_1_1
   What is different about the multiple regression case than the bivariate case?
 </div>
 
+<div class="bs-callout bs-callout-warning">
+An increase of one thousand exported slaves is associated with
+    an expected decrease of -7\times 10^{-4} in the response to trust in neighbors, controlling for individual, district, and country level differences.
+
+The regression coefficients in the version with and without controls are not too different, -0.0005 vs. -0.00067. Coefficient statibility to the inclusion of control variables is used as a heuristic for the potential importance of OVB. More formally, Nunn and Wantchekon use the method developed in Bellows and Miguel (2009) in the Section " Using Selection on Observables to Assess the Bias from Unobservables" on p. 3237. The statistic itself is simple: $\hat{\beta}_f / (\hat{\beta}_r - \hat{\beta}_f)$ where $\hat{\beta}_f$ is the coefficient from the full regression (including controls), and $\hat{\beta}_r$ is the coefficient from the restricted regession (excluding controls):
+    
+    ```r
+    beta_f <- coef(mod_1_1)[["exports"]]
+    beta_r <- coef(mod_1_0)[["exports"]]
+    beta_f / (beta_r - beta_f)
+    ```
+    
+    ```
+    ## [1] -5.030797
+    ```
+    The interpretation of this is that the covariation between the omitted variables and slave exports would have to be five times larger than the covariation between slave exports and the controls included in this regression. 
+ 
+The $R^2$ and number of observations match those reported in the table.
+
+```r
+round(summary(mod_1_1)$r.squared, 2)
+```
+
+```
+## [1] 0.16
+```
+
+```r
+length(fitted(mod_1_1))
+```
+
+```
+## [1] 20027
+```
+I had meant to ask whether the standard errors also match those reported in Table 1, but I moved that to a later question. They do not. The coefficients match, but the standard errors are **much** smaller for the reasons discussed below.
+
+The purpose of asking you to calculate the fitted values manually is so that you understand some of the matrix algebra in 
+You can calculate the design matrix, $X$, of a regression in R using `model.matrix()`. This will expand the formula for the regression, e.g. turning factors into dummy variables, and return a numeric matrix. 
+
+```r
+X <- model.matrix(mod_1_1)
+beta <- coef(mod_1_1)
+```
+Now calculate
+$$
+\hat{y} = X \hat\beta =
+\begin{bmatrix}
+\hat\beta_0 \cdot 1  + \hat\beta_1 x_{1,1} + \dots + \hat\beta_{K,1} \\
+\hat\beta_0 \cdot 1  + \hat\beta_1 x_{1,2} + \dots + \hat\beta_{K,2} \\
+\vdots \\
+\hat\beta_0 \cdot 1  + \hat\beta_1 x_{1,N} + \dots + \hat\beta_{K,N}
+\end{bmatrix}.
+$$
+
+```r
+yhat <- X %*% beta
+head(yhat)
+```
+
+```
+##       [,1]
+## 1 1.342690
+## 2 1.259782
+## 3 1.322990
+## 4 1.292238
+## 5 1.379541
+## 6 1.411596
+```
+We can check that these are the fitted values,
+
+```r
+all.equal(fitted(mod_1_1), as.numeric(yhat), check.attributes = FALSE)
+```
+
+```
+## [1] TRUE
+```
+Note, I use `all.equal` so that the comparison will allow the two vectors to be nearly equal (something which should always be done with floating point numbers due to rounding error).
+The argument `check.attributes` ignores that one vector has names and the other does not, because we only care that they have the same numerical values.
+
+If we were to plot the fitted values against exports in a scatter plot we would have to consider how to handle the control variables. Without control variables we could plot the fitted values of the regresion directly against actual data. Each fitted value has different values of $x$. One way would be to plot the fitted values at representative values of the control varaibles, e.g. means of numeric variables, and modes of factor variables. Alternatively, we could average over all the control variables.
+If you are only interested in how well the regresion fits at different values of the outcome variable, plotting the residuals may make more sense.
+</div>
+
 
 ### Understanding Multiple Regression
 
 <div class="bs-callout bs-callout-info">
 - Run the following regressions
     1. Regress regression of `trust_neighbors` on the controls.
+        
         ```r
         lm(trust_neighbors ~ age + age2 + male + urban_dum +
            education + occupation + religion + living_conditions +
            district_ethnic_frac + frac_ethnicity_in_district +
            isocode, data = nunn)
         ```
+        
+        ```
+        ## 
+        ## Call:
+        ## lm(formula = trust_neighbors ~ age + age2 + male + urban_dum + 
+        ##     education + occupation + religion + living_conditions + district_ethnic_frac + 
+        ##     frac_ethnicity_in_district + isocode, data = nunn)
+        ## 
+        ## Coefficients:
+        ##                (Intercept)                         age  
+        ##                  1.2782704                   0.0075983  
+        ##                       age2                        male  
+        ##                 -0.0000494                   0.0510032  
+        ##                  urban_dum                  education1  
+        ##                 -0.1594966                   0.0314458  
+        ##                 education2                  education3  
+        ##                 -0.0630473                  -0.1524498  
+        ##                 education4                  education5  
+        ##                 -0.2019640                  -0.2016031  
+        ##                 education6                  education7  
+        ##                 -0.2532422                  -0.3039204  
+        ##                 education8                  education9  
+        ##                 -0.1425985                  -0.2725780  
+        ##                occupation1                 occupation2  
+        ##                  0.0722063                   0.0731181  
+        ##                occupation3                 occupation4  
+        ##                  0.0671592                   0.0017896  
+        ##                occupation5                 occupation6  
+        ##                  0.0755122                  -0.0961679  
+        ##                occupation7                 occupation8  
+        ##                  0.0097435                  -0.0844278  
+        ##                occupation9                occupation10  
+        ##                 -0.1037941                  -0.0384627  
+        ##               occupation11                occupation12  
+        ##                 -0.0526848                  -0.1604573  
+        ##               occupation13                occupation14  
+        ##                 -0.0245484                  -0.0751694  
+        ##               occupation15                occupation16  
+        ##                 -0.2297423                  -0.0190316  
+        ##               occupation18                occupation19  
+        ##                 -0.1800131                  -0.1489991  
+        ##               occupation20                occupation21  
+        ##                 -0.0270935                  -0.0447961  
+        ##               occupation22                occupation23  
+        ##                 -0.1016604                  -0.1085771  
+        ##               occupation24                occupation25  
+        ##                  0.0244322                   0.0074535  
+        ##              occupation995                   religion2  
+        ##                 -0.0097963                   0.0440370  
+        ##                  religion3                   religion4  
+        ##                  0.0687563                   0.0363079  
+        ##                  religion5                   religion6  
+        ##                  0.0258377                  -0.0674540  
+        ##                  religion7                  religion10  
+        ##                  0.0140030                   0.0458754  
+        ##                 religion11                  religion12  
+        ##                  0.2831639                   0.3086493  
+        ##                 religion13                  religion14  
+        ##                 -0.0681065                   0.0398328  
+        ##                 religion15                 religion360  
+        ##                  0.3993899                   0.3862733  
+        ##                religion361                 religion362  
+        ##                  0.3569926                   0.8240821  
+        ##                religion363                 religion995  
+        ##                  0.3506265                   0.0436281  
+        ##         living_conditions2          living_conditions3  
+        ##                  0.0607460                   0.1020260  
+        ##         living_conditions4          living_conditions5  
+        ##                  0.1325637                   0.1290344  
+        ##       district_ethnic_frac  frac_ethnicity_in_district  
+        ##                 -0.0024118                   0.0659809  
+        ##                 isocodeBWA                  isocodeGHA  
+        ##                 -0.0435570                   0.2208941  
+        ##                 isocodeKEN                  isocodeLSO  
+        ##                  0.2128326                  -0.1743453  
+        ##                 isocodeMDG                  isocodeMLI  
+        ##                  0.0415341                   0.3224215  
+        ##                 isocodeMOZ                  isocodeMWI  
+        ##                  0.3998523                   0.6573224  
+        ##                 isocodeNAM                  isocodeNGA  
+        ##                  0.2552472                  -0.0343237  
+        ##                 isocodeSEN                  isocodeTZA  
+        ##                  0.6881418                   0.5813355  
+        ##                 isocodeUGA                  isocodeZAF  
+        ##                  0.3183201                   0.1903093  
+        ##                 isocodeZMB  
+        ##                  0.1647789
+        ```
         Save the residuals.
     2. Run the regression of `exports` on the controls. Save the residuals
+        
         ```r
         lm(exports ~ age + age2 + male + urban_dum +
            education + occupation + religion + living_conditions +
            district_ethnic_frac + frac_ethnicity_in_district +
            isocode, data = nunn)
+        ```
+        
+        ```
+        ## 
+        ## Call:
+        ## lm(formula = exports ~ age + age2 + male + urban_dum + education + 
+        ##     occupation + religion + living_conditions + district_ethnic_frac + 
+        ##     frac_ethnicity_in_district + isocode, data = nunn)
+        ## 
+        ## Coefficients:
+        ##                (Intercept)                         age  
+        ##                  5.268e+02                   4.930e-01  
+        ##                       age2                        male  
+        ##                 -1.232e-03                  -8.449e+00  
+        ##                  urban_dum                  education1  
+        ##                  2.193e+01                  -2.029e+01  
+        ##                 education2                  education3  
+        ##                  1.316e+01                   1.896e+01  
+        ##                 education4                  education5  
+        ##                  1.466e+01                   2.174e+01  
+        ##                 education6                  education7  
+        ##                  1.637e+01                   2.564e+01  
+        ##                 education8                  education9  
+        ##                  4.026e+01                   2.111e+01  
+        ##                occupation1                 occupation2  
+        ##                 -1.099e+01                   1.060e+00  
+        ##                occupation3                 occupation4  
+        ##                 -4.647e+01                   1.212e+01  
+        ##                occupation5                 occupation6  
+        ##                 -9.407e+00                   2.202e+01  
+        ##                occupation7                 occupation8  
+        ##                  8.466e+00                  -1.202e+01  
+        ##                occupation9                occupation10  
+        ##                  3.097e+00                   8.044e+00  
+        ##               occupation11                occupation12  
+        ##                  3.405e+01                   5.352e+00  
+        ##               occupation13                occupation14  
+        ##                  1.027e+01                   2.911e+01  
+        ##               occupation15                occupation16  
+        ##                  8.852e+00                   1.109e+01  
+        ##               occupation18                occupation19  
+        ##                  9.393e+00                  -2.134e+01  
+        ##               occupation20                occupation21  
+        ##                  1.883e+00                  -3.606e+00  
+        ##               occupation22                occupation23  
+        ##                  1.847e-01                   1.650e+01  
+        ##               occupation24                occupation25  
+        ##                 -1.229e+01                   2.250e+01  
+        ##              occupation995                   religion2  
+        ##                  1.806e+01                   1.171e+01  
+        ##                  religion3                   religion4  
+        ##                  1.014e+01                   1.003e+01  
+        ##                  religion5                   religion6  
+        ##                  2.173e+01                   6.620e+01  
+        ##                  religion7                  religion10  
+        ##                 -1.158e+01                   2.063e+01  
+        ##                 religion11                  religion12  
+        ##                 -8.100e+01                  -4.966e+01  
+        ##                 religion13                  religion14  
+        ##                 -2.220e+00                   6.279e+00  
+        ##                 religion15                 religion360  
+        ##                 -1.339e+01                  -2.778e+01  
+        ##                religion361                 religion362  
+        ##                 -1.940e+01                   2.301e+00  
+        ##                religion363                 religion995  
+        ##                  5.226e+01                  -6.394e+00  
+        ##         living_conditions2          living_conditions3  
+        ##                 -2.191e+01                  -1.940e+01  
+        ##         living_conditions4          living_conditions5  
+        ##                 -1.454e+01                  -1.207e+01  
+        ##       district_ethnic_frac  frac_ethnicity_in_district  
+        ##                 -2.092e+01                   4.512e+01  
+        ##                 isocodeBWA                  isocodeGHA  
+        ##                 -5.665e+02                  -2.831e+02  
+        ##                 isocodeKEN                  isocodeLSO  
+        ##                 -5.781e+02                  -5.537e+02  
+        ##                 isocodeMDG                  isocodeMLI  
+        ##                 -5.499e+02                  -3.761e+02  
+        ##                 isocodeMOZ                  isocodeMWI  
+        ##                 -4.699e+02                  -5.187e+02  
+        ##                 isocodeNAM                  isocodeNGA  
+        ##                 -5.783e+02                  -3.052e+02  
+        ##                 isocodeSEN                  isocodeTZA  
+        ##                 -4.525e+02                  -5.523e+02  
+        ##                 isocodeUGA                  isocodeZAF  
+        ##                 -5.656e+02                  -5.908e+02  
+        ##                 isocodeZMB                  isocodeZWE  
+        ##                 -5.660e+02                  -6.162e+02
         ```
         Save the residuals.
     3. Regress the residuals from 1. on the residuals on 2.
@@ -374,12 +554,40 @@ mod_1_1
 
 ## Validity of the standard errors
 
-One of the assumptions necessary for OLS standard errors to be correct is homoskedasticity homoskedasticity (constant variance), and that the errors are uncorrelated.
+For OLS standard errors to be unbiased each disturbance must have the same variance, $\Var(\varepsilon_i) = \sigma^2$, and all disturbances must be uncorrelated, $\Cov(\varepsilon_i, \varepsilon_j) = 0$ if $i \neq j$.
 
 <div class="bs-callout bs-callout-info">
 - How might that assumption be violated?
 - Plot the residuals of the regression by district. Do they appear to be uncorrelated? What does that say about the validity of the OLS standard errors?
 - Do the standard errors match those reported in Table 1 of the article? What sort of standard errors does the article use?
+</div>
+
+<div class = "bs-callout bs-callout-warning">
+The answers of individuals in the same country, ethnicity, district, or living in close geographic proximity may be correlated even after controlling for the variables included in these models.
+
+There wasn't a particularly good way to do this. 
+The idea was to get an intuition that clustered standard errors means that groups have correlated residuals.
+In this case, it is likely that individuals within ethnicities or districts are correlated.
+
+```r
+ggplot(augment(mod_1_1, data = nunn) %>%
+         group_by(ethnicity) %>%
+         summarize(err = mean(.std.resid),
+                   std.err = mean(.std.resid) / (sd(.std.resid) / sqrt(n())), obs = n()) %>%
+         filter(obs > 5),
+       aes(x = ethnicity, y = err, ymin = err - 2 * std.err, ymax = err + 2 * std.err)) + geom_pointrange()
+```
+
+![](index_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+
+In Table 1 (p. 3232), three types of standard errors are reported
+
+1. Clustered by ethnic groups
+2. Clustering within ethnic groups and within districts
+3. Standard erorrs adjusted for two-dimensional spatial autocorrelation.
+
+The standard errors reported in Table 1 are much larger than those in the OLS regression that we ran earlier. The reason is that the classical OLS errors do not account for correlation within these clusters. Effectively, by ignoring that correlation we are pretending we have many more observations that we do. See [A Practitioner's Guide to Cluster-Robust Inference](http://cameron.econ.ucdavis.edu/research/Cameron_Miller_Cluster_Robust_October152013.pdf) or the discussion of clustered standard errors in Angrist and Pischke "Mostly Harmless Econometrics". The easiest way to implement cluster robust errors in R is to use the [plm](https://cran.r-project.org/web/packages/plm/index.html) package.
+
 </div>
 
 
@@ -401,8 +609,15 @@ mod_1_6 <- lm(trust_neighbors ~ ln_export_pop +
 <div>
 - Interpret the effect of `ln_export_pop` on `trust_neighbors`
 - Why is "log(1 + exports / pop)" used as the measure instead of "log(exports / pop)"?
-- Plot the fitted values of log(1 + exports / pop) and their confidence interval against "log(1 + exports / pop)" against the residuals of the controls only regression. Include the line, confidence intervals, and data points.
-- Plot the fitted values of exports / pop against the residuals of the controls only regression. Include the line, confidence intervals, and data points. How does this relationship differ from the one which used the level of slave exports with out taking the logarithm or adjusting for population?
+</div>
+
+<div class="bs-callout bs-callout-warning">
+Roughly, a one percentage point increase in slave exports in an ethnic groups is associated with an expected decrease of 0.0074 (-0.74/100) in the the response for trust in neighbors of members of that ethnicity, controlling for individual, district, and country characteristics.
+
+Many ethnicities have values of zero for slave exports, and $\log(0)$ is undefined. Adding a small positive number is a common way to adjust variables that seem to have a logarithmic (decreasing returns) effect, but include zeros.
+
+The rest of this question was somewhere between poorly worded and incoherent. My intent was to have you plot the functional forms in each regression.
+
 </div>
 
 
@@ -512,12 +727,97 @@ results <- bind_rows(results)
 <div class="bs-callout bs-callout-info">
 Use the results  of this simulation to answer the following questions:
 
-- Plot the distribution of the coefficients of `ln_export_pop`.
+- Plot the distribution of the coeficient of `ln_export_pop`.
 - What is the standard deviation of the sampling distribution of the coefficient of `ln_export_pop`? How does this compare to the standard error of this coefficient given by `lm()`?
 - Calculate the correlation matrix of the coefficients. For the first step will need to create a data frame using `spread` in which the rows are iterations, the columns are coefficients, and the values are the estimates.
-- Plot that correlation matrix using `geom_raster`. Are the coefficients of coefficients uncorrelated? In general, when would coefficients be more or less correlated?
+- Plot that correlation matrix using `geom_raster`. Are the coefficients uncorrelated? In general, when would coefficients be more or less correlated?
 - Why is this simulation not (directly) appropriate for calculating a $p$-value. What distribution would you have to simulate from to calculate a $p$-value?
 </div>
+
+<div class="bs-callout bs-callout-warning">
+The sampling distribution of $\hat{\beta}_{\mathtt{ln\_export\_pop}}$ is approximately normal and centered at its OLS value of around -0.75.
+
+```r
+ggplot(filter(results, term == "ln_export_pop"),
+       aes(x = estimate)) +
+  geom_density() + geom_rug()
+```
+
+![](index_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
+
+The standard deviation of the estimated sampling distribution of the coefficient of `ln_export_pop` is 
+
+```r
+filter(results, term == "ln_export_pop") %>%
+  magrittr::extract2("estimate") %>%
+  sd()
+```
+
+```
+## [1] 0.06328606
+```
+This is close to the standard standard error reported in the regression,
+
+```r
+filter(tidy(mod), term == "ln_export_pop")
+```
+
+```
+##            term   estimate  std.error statistic      p.value
+## 1 ln_export_pop -0.7434568 0.06460478 -11.50777 1.551239e-30
+```
+
+The bootstrap is generating values assuming that the estimated
+model is the "true" model. But in order to calculate a
+p-value you need to generate the sampling distribution assuming that the null hypothesis is true.
+
+```r
+beta_cor <- filter(results,
+       term %in% c("ln_export_pop", "age", "age2", "male", "urban_dum") |
+         str_detect(term, "education") |
+         str_detect(term, "occupation") |
+         str_detect(term, "living_conditions") |
+         str_detect(term, "religion")) %>%
+  select(term, estimate, .iter) %>%
+  rename(iter = .iter) %>%
+  spread(term, estimate, -iter) %>%
+  select(-iter) %>%
+  cor() %>%
+  tidy() %>%
+  rename(term = .rownames) %>%
+  gather(term2, cor, -term)
+
+ggplot(beta_cor, aes(x = term, y = term2, fill = cor)) +
+  geom_raster() +
+  scale_fill_viridis()
+```
+
+![](index_files/figure-html/unnamed-chunk-30-1.png)<!-- -->
+The $\beta$ coefficients are not uncorrelated.
+We can also observe this in the estimated variance-covariance matrix from the regression,
+
+```r
+cov2cor(vcov(mod)[1:6, 1:6])
+```
+
+```
+##               (Intercept) ln_export_pop          age         age2
+## (Intercept)    1.00000000  -0.296892726 -0.540483926  0.509289743
+## ln_export_pop -0.29689273   1.000000000 -0.013298893  0.004992375
+## age           -0.54048393  -0.013298893  1.000000000 -0.975296583
+## age2           0.50928974   0.004992375 -0.975296583  1.000000000
+## male          -0.07803927   0.029867740 -0.001162037 -0.025516600
+## urban_dum     -0.05286134  -0.045585417  0.012435687 -0.018532057
+##                       male   urban_dum
+## (Intercept)   -0.078039269 -0.05286134
+## ln_export_pop  0.029867740 -0.04558542
+## age           -0.001162037  0.01243569
+## age2          -0.025516600 -0.01853206
+## male           1.000000000  0.01914562
+## urban_dum      0.019145621  1.00000000
+```
+</div>
+
 
 
 ## Non-parametric Bootstrap
@@ -546,6 +846,7 @@ So, in order to calculate bootstrap standard errors, we will need to draw a samp
 To get bootstrap standard errors, we draw `B` replications, run an  regression, and save the estimates. 
 
 ```r
+mod_bs <- lm(trust_neighbors ~ ln_export_pop, data = nunn)
 beta_bs <- 
   bootstrap(nunn, 1024) %>%
     do(tidy(lm(trust_neighbors ~ ln_export_pop, data = .)))
@@ -577,6 +878,64 @@ The following are two simple methods.
 - Compare the bootstrapped confidence intervals to the OLS confidence interval.
 </div>
 
+<div class="bs-callout bs-callout-warning">
+
+The confidence interval using the bootstrap standard errors is,
+
+```r
+# OLS estimate
+betahat <- coef(mod_bs)[["ln_export_pop"]]
+z <- 1.96
+filter(beta_bs, term == "ln_export_pop") %>%
+  ungroup() %>%
+  summarize(se = sd(estimate)) %>%
+  mutate(conf.low = betahat - z * se,
+         conf.high = betahat + z * se)
+```
+
+```
+## Source: local data frame [1 x 3]
+## 
+##           se   conf.low  conf.high
+##        (dbl)      (dbl)      (dbl)
+## 1 0.04459353 -0.4833508 -0.3085442
+```
+The confidence interval using bootstrap quantiles is,
+
+```r
+# OLS estimate
+filter(beta_bs, term == "ln_export_pop") %>%
+  ungroup() %>%
+  summarize(conf.low = quantile(estimate, 0.025),
+            conf.high = quantile(estimate, 0.975))
+```
+
+```
+## Source: local data frame [1 x 2]
+## 
+##     conf.low  conf.high
+##        (dbl)      (dbl)
+## 1 -0.4772805 -0.3139828
+```
+In this case the two methods produce similar confidence intervals, since the sampling distribution of $\hat\beta$ is symmetric.
+These confidence interval are also similar to those produced by OLS.
+
+```r
+confint(mod_bs)
+```
+
+```
+##                    2.5 %     97.5 %
+## (Intercept)    1.7619152  1.7949429
+## ln_export_pop -0.4825835 -0.3093115
+```
+
+This is somewhat disappointing.
+Bootstrapping in this manner does not help us produce confidence intervals accounting for the clustering that produces larger standard errors.
+The reason is that we are sampling from the "population".
+In order to account for the correlation within clusters, we would need to account for the way that the sample was generated from the population. There are several ways to bootstrap with clustering. The most important part is to randomly sample ethnicities from the set of ethnicities.
+</div>
+
 There are even more advanced methods such as the studentized bootstrap, and the adjusted bootstrap percentile (BCa) methods
 included in `boot.ci`.
 
@@ -590,6 +949,45 @@ For example, in a time series it would be inappropriate to sample observations w
 - In the previous examples, did we draw the sample in the same way as it was drawn from the population? What would
   be a better way of drawing the bootstrapped samples?
   Try to implement it; see the `group_by` argument of `bootstrap`.
+</div>
+
+<div class="bs-callout bs-callout-warning">
+See above.
+
+The instructions given were too simplistic, and this requires more complicated code than I thought when writing it.
+The `group_by` argument for `bootstrap()` allows for sampling within the clusters, but we need to sample the clusters themselves.
+
+
+```r
+ethnicities <- select(nunn, ethnicity) %>% unique()
+iter <- 1024
+bs_samples <- list()
+for (i in seq_len(iter)) {
+  # Resample ethnic groups
+  ethnic_sample <- sample_frac(ethnicities, 1, replace = TRUE)
+  # Merge with Nunn data to get a new dataset
+  newdata <- left_join(ethnic_sample, nunn, by = "ethnicity")
+  bs_samples[[i]] <- tidy(lm(trust_neighbors ~ ln_export_pop, data = newdata))
+}
+bs_samples <- bind_rows(bs_samples)
+
+bs_samples %>%
+  filter(term == "ln_export_pop")  %>%
+  ungroup() %>%
+  summarize(conf.low = quantile(estimate, 0.025),
+            conf.high = quantile(estimate, 0.975),
+            se = sd(estimate))
+```
+
+```
+## Source: local data frame [1 x 3]
+## 
+##    conf.low conf.high        se
+##       (dbl)     (dbl)     (dbl)
+## 1 -0.807128 0.3850288 0.3199544
+```
+Now the confidence interval and standard errors are **much** larger than those reported by OLS, and the bootstrapping that did not account for clusters.
+
 </div>
 
 ## F-test example
@@ -685,11 +1083,16 @@ levels of significance.
 - Why can't you use F-tests to compare different models in Table 1?
 - Run an F-test comparing the model with only controls to the one in Model 1, Table 6.
     In other words, the null hypothesis is $\beta_{\mathtt{ln\_exports\_pop}} = 0$.
+    
     ```r
     mod_controls <- lm(trust_neighbors ~ age + age2 + male + urban_dum +
               education + occupation + religion + living_conditions +
               district_ethnic_frac + frac_ethnicity_in_district +
-              isocode, data = nunn)    
+              isocode,
+              data = select(nunn, trust_neighbors, age, age2,
+                            male, urban_dum, education, occupation, religion, living_conditions, district_ethnic_frac,
+                            frac_ethnicity_in_district, isocode,
+                            ln_export_pop) %>% na.omit())
     mod_1_6 <- lm(trust_neighbors ~ ln_export_pop + age + age2 + male + urban_dum +
               education + occupation + religion + living_conditions +
               district_ethnic_frac + frac_ethnicity_in_district +
@@ -699,4 +1102,49 @@ levels of significance.
     coefficient on `ln_export_pop`? Square the t-statistic for the coefficient
     of `ln_export_pop`; how does it compare to the F-statistic? What is the
     relationship between a t-test and an F-test for a single parameter in a regression?
+</div>
+
+<div class="bs-callout bs-callout-warning">
+F-tests can only compare nested models on the same data. The models in Table 1 are not nested, because they are not subsets of each other. Each model uses a different measure of slave exports. 
+The $p$-value of the test of a single coefficient and the equivalent $F$-test are the same. 
+The $F$-statistic is the square of the p-value.
+
+```r
+anova(mod_controls, mod_1_6)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Model 1: trust_neighbors ~ age + age2 + male + urban_dum + education + 
+##     occupation + religion + living_conditions + district_ethnic_frac + 
+##     frac_ethnicity_in_district + isocode
+## Model 2: trust_neighbors ~ ln_export_pop + age + age2 + male + urban_dum + 
+##     education + occupation + religion + living_conditions + district_ethnic_frac + 
+##     frac_ethnicity_in_district + isocode
+##   Res.Df   RSS Df Sum of Sq      F    Pr(>F)    
+## 1  17567 14888                                  
+## 2  17566 14777  1     111.4 132.43 < 2.2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+tvalue <- tidy(mod_1_6) %>% filter(term == "ln_export_pop") %>%
+  magrittr::extract2("statistic")
+tvalue
+```
+
+```
+## [1] -11.50777
+```
+
+```r
+tvalue ^ 2 
+```
+
+```
+## [1] 132.4287
+```
+
 </div>
